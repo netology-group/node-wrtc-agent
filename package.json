@@ -1,0 +1,33 @@
+{
+  "name": "@ulms/wrtc-agent",
+  "version": "0.1.0",
+  "description": "WebRTC agent for load testing",
+  "main": "cli.js",
+  "bin": {
+    "wrtc-agent": "./cli.js"
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "copy-module-darwin": "cp ./build/darwin/Release/wrtc.node ./node_modules/wrtc/build/Release/",
+    "copy-module-linux": "cp ./build/linux/Release/wrtc.node ./node_modules/wrtc/build/Release/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/netology-group/node-wrtc-agent.git"
+  },
+  "author": "a.konstantinov@netology-group.ru",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/netology-group/node-wrtc-agent/issues"
+  },
+  "homepage": "https://github.com/netology-group/node-wrtc-agent#readme",
+  "dependencies": {
+    "@netology-group/mqtt-client": "0.4.2",
+    "@ulms/api-clients": "~0.4.0",
+    "sdp-transform": "~2.13.0",
+    "wrtc": "netology-group/node-webrtc#feature/enable-h264",
+    "yargs": "~15.3.1"
+  }
+}
