@@ -1,6 +1,6 @@
 {
   "name": "@ulms/wrtc-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "WebRTC agent for load testing",
   "main": "cli.js",
   "bin": {
@@ -11,7 +11,9 @@
   },
   "scripts": {
     "copy-module-darwin": "cp ./build/darwin/Release/wrtc.node ./node_modules/wrtc/build/Release/",
-    "copy-module-linux": "cp ./build/linux/Release/wrtc.node ./node_modules/wrtc/build/Release/"
+    "copy-module-linux": "cp ./build/linux/Release/wrtc.node ./node_modules/wrtc/build/Release/",
+    "lint": "eslint ./lib ./cli.js",
+    "test": "npm run lint"
   },
   "repository": {
     "type": "git",
@@ -25,9 +27,20 @@
   "homepage": "https://github.com/netology-group/node-wrtc-agent#readme",
   "dependencies": {
     "@netology-group/mqtt-client": "0.4.2",
+    "@peermetrics/webrtc-stats": "alexkonst/webrtc-stats#feature/node-webrtc-support",
     "@ulms/api-clients": "~0.4.0",
+    "change-case": "~4.1.1",
     "sdp-transform": "~2.13.0",
+    "uuid": "~7.0.3",
     "wrtc": "netology-group/node-webrtc#feature/enable-h264",
     "yargs": "~15.3.1"
+  },
+  "devDependencies": {
+    "eslint": "~6.8.0",
+    "eslint-config-standard": "~14.1.0",
+    "eslint-plugin-import": "~2.20.1",
+    "eslint-plugin-node": "~11.0.0",
+    "eslint-plugin-promise": "~4.2.1",
+    "eslint-plugin-standard": "~4.0.1"
   }
 }

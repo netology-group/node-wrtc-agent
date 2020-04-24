@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+/* eslint-disable quote-props */
 const { argv } = require('yargs')
   .scriptName('wrtc-agent')
   .options({
@@ -36,6 +37,15 @@ const { argv } = require('yargs')
       description: 'STUN server URL',
       type: 'string'
     },
+    'telemetry': {
+      description: 'Telemetry app name',
+      type: 'string'
+    },
+    'telemetry-interval': {
+      default: 5000,
+      description: 'Telemetry interval (ms)',
+      type: 'number'
+    },
     'turn': {
       demandOption: true,
       description: 'TURN server URL',
@@ -56,13 +66,13 @@ const { argv } = require('yargs')
       demandOption: true,
       description: 'MQTT broker URI',
       type: 'string'
-    },
+    }
   })
   .help()
+/* eslint-enable quote-props */
 
-// console.log('[argv]', argv)
-
-const { createClient, enterRoom } = require('./lib/mqtt')
+const { createPeerStatsMonitor, stats2metrics } = require('./lib/metrics')
+const { createClient, enterRoom, publishTelemetry } = require('./lib/mqtt')
 const { Peer, transformOffer } = require('./lib/peer')
 
 // args
@@ -73,6 +83,8 @@ const {
   roomId,
   relayOnly,
   stun,
+  telemetry: telemetryAppName,
+  telemetryInterval,
   turn,
   turnPassword,
   turnUsername,
@@ -84,13 +96,14 @@ const iceServers = [
   {
     urls: turn,
     username: turnUsername,
-    credential: turnPassword,
-  },
+    credential: turnPassword
+  }
 ]
 const iceTransportPolicy = relayOnly ? 'relay' : 'all'
 
 let activeRtcStream = null
 let peer = null
+let peerStats = null
 
 function listRtcStreamAll (client, roomId) {
   const LIST_LIMIT = 25
@@ -135,7 +148,7 @@ function listRtcStreamAll (client, roomId) {
   })
 }
 
-function startListening (client, activeRtcStream) {
+function startListening (client, mqttClient, activeRtcStream) {
   const activeRtcId = activeRtcStream.rtc_id
   const listenerOptions = { offerToReceiveVideo: true, offerToReceiveAudio: true }
 
@@ -151,13 +164,16 @@ function startListening (client, activeRtcStream) {
     },
     (track, streams) => {
       console.debug('[track]', track.kind)
-    },
+    }
   )
 
-  // setInterval(() => {
-  //   peer.__peer.getStats()
-  //     .then(report => console.log('[getStats]', report))
-  // }, 5000)
+  if (telemetryAppName) {
+    peerStats = createPeerStatsMonitor(peer._peer, telemetryInterval, (stats) => {
+      const payload = stats2metrics(stats)
+
+      publishTelemetry(mqttClient, clientId, telemetryAppName, payload)
+    })
+  }
 
   client.connectRtc(activeRtcId)
     .then((response) => {
@@ -184,10 +200,14 @@ function stopListening () {
 
     peer = null
   }
+
+  if (peerStats) {
+    peerStats = null
+  }
 }
 
 createClient({ appName, clientId, password, uri })
-  .then(({ conferenceClient }) => {
+  .then(({ conferenceClient, mqttClient }) => {
     function isStreamActive (stream) {
       const { time } = stream
 
@@ -204,7 +224,7 @@ createClient({ appName, clientId, password, uri })
       if (!activeRtcStream && isStreamActive(stream)) {
         activeRtcStream = stream
 
-        startListening(conferenceClient, activeRtcStream)
+        startListening(conferenceClient, mqttClient, activeRtcStream)
       } else if (activeRtcStream && stream && activeRtcStream.id === stream.id && isStreamEnded(stream)) {
         activeRtcStream = null
 
@@ -215,7 +235,7 @@ createClient({ appName, clientId, password, uri })
     }
 
     conferenceClient.on('rtc_stream.update', (event) => {
-      const { id, rtc_id, sent_by, time } = event.data
+      const { id, rtc_id, sent_by, time } = event.data // eslint-disable-line camelcase
 
       console.group(`[event:${event.type}]`)
       console.log('[id]', id)
