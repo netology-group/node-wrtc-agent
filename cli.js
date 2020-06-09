@@ -188,6 +188,8 @@ function startListening (client, mqttClient, activeRtcStream) {
         .then((response) => ({ response, offer: newOffer }))
     })
     .then(({ response, offer }) => {
+      console.log('[janus] answer', response.jsep.sdp.split('\r\n'))
+
       return peer.setOffer(offer)
         .then(() => peer.setAnswer(response.jsep))
     })
