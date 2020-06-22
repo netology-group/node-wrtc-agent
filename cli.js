@@ -66,6 +66,13 @@ const { argv } = require('yargs')
       demandOption: true,
       description: 'MQTT broker URI',
       type: 'string'
+    },
+    'vc': {
+      alias: 'video-codec',
+      choices: ['H264', 'VP8', 'VP9'],
+      default: 'H264',
+      description: 'Codec name for video (SDP)',
+      type: 'string'
     }
   })
   .help()
@@ -88,7 +95,8 @@ const {
   turn,
   turnPassword,
   turnUsername,
-  uri
+  uri,
+  videoCodec
 } = argv
 
 const iceServers = [
@@ -182,7 +190,7 @@ function startListening (client, mqttClient, activeRtcStream) {
       return peer.createOffer(listenerOptions)
     })
     .then(offer => {
-      const newOffer = transformOffer(offer)
+      const newOffer = transformOffer(offer, { videoCodec })
 
       return client.createRtcSignal(handleId, newOffer)
         .then((response) => ({ response, offer: newOffer }))

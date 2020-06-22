@@ -34,6 +34,8 @@ Options:
   --turn-password       TURN password                        [string] [required]
   --turn-username       TURN username                        [string] [required]
   -u, --uri             MQTT broker URI                      [string] [required]
+  --vc, --video-codec   Codec name for video (SDP)
+                      [string] [choices: "H264", "VP8", "VP9"] [default: "H264"]
   --help                Show help                                      [boolean]
 ```
 
