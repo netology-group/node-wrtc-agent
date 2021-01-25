@@ -1,6 +1,6 @@
 {
   "name": "@ulms/wrtc-agent",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "description": "WebRTC agent for load testing",
   "main": "cli.js",
   "bin": {
@@ -28,7 +28,7 @@
   "dependencies": {
     "@netology-group/mqtt-client": "0.4.2",
     "@peermetrics/webrtc-stats": "alexkonst/webrtc-stats#feature/node-webrtc-support",
-    "@ulms/api-clients": "~0.4.0",
+    "@ulms/api-clients": "4.0.0",
     "change-case": "~4.1.1",
     "sdp-transform": "~2.13.0",
     "uuid": "~7.0.3",

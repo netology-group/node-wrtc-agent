@@ -79,7 +79,7 @@ const { argv } = require('yargs')
 /* eslint-enable quote-props */
 
 const { createPeerStatsMonitor, stats2metrics } = require('./lib/metrics')
-const { createClient, enterRoom, publishTelemetry } = require('./lib/mqtt')
+const { INTENT_READ, createClient, enterRoom, publishTelemetry, rejectByTimeout } = require('./lib/mqtt')
 const { Peer, transformOffer } = require('./lib/peer')
 
 // args
@@ -99,6 +99,7 @@ const {
   videoCodec
 } = argv
 
+const REJECT_TIMEOUT = 5e3
 const iceServers = [
   { urls: stun },
   {
@@ -109,18 +110,16 @@ const iceServers = [
 ]
 const iceTransportPolicy = relayOnly ? 'relay' : 'all'
 
-let activeRtcStream = null
 let peer = null
 let peerStats = null
 
-function listRtcStreamAll (client, roomId) {
+function listRtcAll (client, roomId) {
   const LIST_LIMIT = 25
-  const now = Math.round(Date.now() / 1000)
   let result = []
   let counter = 0
 
   function loop (room, offset, cb) {
-    client.listRtcStream(room, { offset, time: [now, null] })
+    rejectByTimeout(client.listRtc(room, { offset }), REJECT_TIMEOUT)
       .then((response) => {
         if (response.length > 0) {
           counter += 1
@@ -137,6 +136,8 @@ function listRtcStreamAll (client, roomId) {
         } else {
           cb()
         }
+
+        return null
       })
       .catch((error) => {
         cb(error)
@@ -156,19 +157,33 @@ function listRtcStreamAll (client, roomId) {
   })
 }
 
-function startListening (client, mqttClient, activeRtcStream) {
-  const activeRtcId = activeRtcStream.rtc_id
+function startListening (client, mqttClient) {
   const listenerOptions = { offerToReceiveVideo: true, offerToReceiveAudio: true }
-
-  let handleId = null
+  let resolveFn
+  let rejectFn
+  const peerReadyPromise = new Promise((resolve, reject) => {
+    resolveFn = resolve
+    rejectFn = reject
+  })
 
   peer = new Peer(
     { iceServers, iceTransportPolicy },
     candidateObj => {
       const { candidate, completed, sdpMid, sdpMLineIndex } = candidateObj
 
-      client.createRtcSignal(handleId, completed ? candidateObj : { candidate, sdpMid, sdpMLineIndex })
-        .catch(error => console.debug('[startListening] error', error))
+      rejectByTimeout(client.createTrickleSignal(roomId, completed ? candidateObj : {
+        candidate,
+        sdpMid,
+        sdpMLineIndex
+      }), REJECT_TIMEOUT)
+        .catch(error => console.debug('[startListening:createTrickleSignal] error', error))
+    },
+    (iceConnectionState) => {
+      if (iceConnectionState === 'connected' || iceConnectionState === 'completed') {
+        resolveFn()
+      } else if (iceConnectionState === 'failed' || iceConnectionState === 'closed') {
+        rejectFn()
+      }
     },
     (track, streams) => {
       console.debug('[track]', track.kind)
@@ -183,23 +198,30 @@ function startListening (client, mqttClient, activeRtcStream) {
     })
   }
 
-  client.connectRtc(activeRtcId)
-    .then((response) => {
-      handleId = response.handle_id
-
-      return peer.createOffer(listenerOptions)
-    })
-    .then(offer => {
+  peer.createOffer(listenerOptions)
+    .then((offer) => {
       const newOffer = transformOffer(offer, { videoCodec })
 
-      return client.createRtcSignal(handleId, newOffer)
-        .then((response) => ({ response, offer: newOffer }))
+      return rejectByTimeout(client.createSignal(roomId, newOffer), REJECT_TIMEOUT)
+        .then(response => ({ response, offer: newOffer }))
     })
     .then(({ response, offer }) => {
       return peer.setOffer(offer)
         .then(() => peer.setAnswer(response.jsep))
     })
-    .catch(error => console.debug('[startListening] error', error))
+    .catch(error => {
+      console.debug('[startListening] error', error)
+
+      rejectFn()
+    })
+
+  return peerReadyPromise
+}
+
+function connectToStream (client, rtcId) {
+  rejectByTimeout(client.connectRtc(rtcId, { intent: INTENT_READ }), REJECT_TIMEOUT)
+    .then((response) => console.log('[connectToStream:connectRtc] response', response))
+    .catch(error => console.debug('[connectToStream:connectRtc] error', error))
 }
 
 function stopListening () {
@@ -216,57 +238,21 @@ function stopListening () {
 
 createClient({ appName, clientId, password, uri })
   .then(({ conferenceClient, mqttClient }) => {
-    function isStreamActive (stream) {
-      const { time } = stream
+    enterRoom(conferenceClient, roomId, clientId)
+      .then(() => startListening(conferenceClient, mqttClient))
+      .then(() => listRtcAll(conferenceClient, roomId))
+      .then((response) => {
+        console.log('[listRtcAll] response', response)
 
-      return Boolean(time && time.length > 0 && time[0] !== null && time[1] === null)
-    }
-
-    function isStreamEnded (stream) {
-      const { time } = stream
-
-      return Boolean(time && time.length > 0 && time[0] !== null && time[1] !== null)
-    }
-
-    function handleStream (stream) {
-      if (!activeRtcStream && isStreamActive(stream)) {
-        activeRtcStream = stream
-
-        startListening(conferenceClient, mqttClient, activeRtcStream)
-      } else if (activeRtcStream && stream && activeRtcStream.id === stream.id && isStreamEnded(stream)) {
-        activeRtcStream = null
+        if (response.length > 0) {
+          connectToStream(conferenceClient, response[0].id)
+        } else {
+          console.warn('[listRtcAll] empty response')
+        }
+      })
+      .catch(error => {
+        console.log('error', error)
 
         stopListening()
-      } else {
-        // do nothing
-      }
-    }
-
-    conferenceClient.on('rtc_stream.update', (event) => {
-      const { id, rtc_id, sent_by, time } = event.data // eslint-disable-line camelcase
-
-      console.group(`[event:${event.type}]`)
-      console.log('[id]', id)
-      console.log('[rtc_id]', rtc_id)
-      console.log('[sent_by]', sent_by)
-      console.log('[time]', time)
-      console.groupEnd()
-
-      handleStream(event.data)
-    })
-
-    enterRoom(conferenceClient, roomId, clientId)
-      .then(() => {
-        console.log('[READY]')
-
-        listRtcStreamAll(conferenceClient, roomId)
-          .then((response) => {
-            console.log('[listRtcStream] response', response)
-
-            if (response.length > 0 && isStreamActive(response[0])) {
-              handleStream(response[0])
-            }
-          })
-          .catch(error => console.log('[listRtcStreamAll] error', error))
       })
   })
