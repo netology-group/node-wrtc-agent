@@ -10,29 +10,30 @@
     "lib": "lib"
   },
   "scripts": {
-    "copy-module-darwin": "cp ./build/darwin/Release/wrtc.node ./node_modules/wrtc/build/Release/",
-    "copy-module-linux": "cp ./build/linux/Release/wrtc.node ./node_modules/wrtc/build/Release/",
     "lint": "eslint ./lib ./cli.js",
     "test": "npm run lint"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/netology-group/node-wrtc-agent.git"
+    "url": "git+https://github.com/foxford/node-wrtc-agent.git"
   },
-  "author": "a.konstantinov@netology-group.ru",
+  "author": "a.konstantinov@foxford.ru",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/netology-group/node-wrtc-agent/issues"
+    "url": "https://github.com/foxford/node-wrtc-agent/issues"
   },
-  "homepage": "https://github.com/netology-group/node-wrtc-agent#readme",
+  "homepage": "https://github.com/foxford/node-wrtc-agent#readme",
   "dependencies": {
     "@netology-group/mqtt-client": "0.4.2",
     "@peermetrics/webrtc-stats": "alexkonst/webrtc-stats#feature/node-webrtc-support",
-    "@ulms/api-clients": "~0.4.0",
+    "@ulms/api-clients": "5.24.0",
     "change-case": "~4.1.1",
+    "isomorphic-fetch": "^3.0.0",
+    "lodash": "4.17.21",
+    "regenerator-runtime": "^0.13.9",
     "sdp-transform": "~2.13.0",
     "uuid": "~7.0.3",
-    "wrtc": "netology-group/node-webrtc#feature/enable-h264",
+    "wrtc": "0.4.7",
     "yargs": "~15.3.1"
   },
   "devDependencies": {
@@ -41,6 +42,7 @@
     "eslint-plugin-import": "~2.20.1",
     "eslint-plugin-node": "~11.0.0",
     "eslint-plugin-promise": "~4.2.1",
-    "eslint-plugin-standard": "~4.0.1"
+    "eslint-plugin-standard": "~4.0.1",
+    "node-pre-gyp": "0.17.0"
   }
 }

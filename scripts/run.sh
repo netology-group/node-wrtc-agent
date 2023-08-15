@@ -2,43 +2,64 @@
 
 index=$1
 n=$2
+room=$3
+SLEEP_SECONDS="${4:-1}"
 
-users=()
+users=(
+Z2lkOi8vc3RvZWdlL0FkbWluLzc4Ng==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc4Nw==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc4OA==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc4OQ==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5MA==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5MQ==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5Mg==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5Mw==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5NA==.usr.foxford.ru
+Z2lkOi8vc3RvZWdlL0FkbWluLzc5NQ==.usr.foxford.ru
+)
 
-tokens=()
+tokens=(
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzROZz09IiwiZXhwIjoxNjkyMTkwNTY2fQ.2_qPdDtS_22Mah-vOSDiAl0SFDDKyXsm6vwllI4xQs1pXhSTeUHlHxTQRPZjDkmc8rlqOW7Tpkzthr7YU9xd6w
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzROdz09IiwiZXhwIjoxNjkyMTkwNTY2fQ.xe2nuuNRXvtSfbKOTdtmCGwPC0qAQ09yFfoaJOo-CA0x5EWSmbs0IAXymU8m2JZuTR7IMrtvgq0jXhlxgEHemQ
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzRPQT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.4ncj7kzCMDdoLYa7t8BlfumOBEiPQFSADSzI4mCspdXIDbhC-x54VvOXUI_NLCtu2HXlrR4OWEOZEWuoSsNwqg
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzRPUT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.eURNSW_cyk_VkPLnfEfLkCHBMwh7DB_kpJ6Nkx5AB0tO_pr45suytuSRuy95R052XfmrKfwYG72uS0OZ8J6HnA
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNQT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.Goc3V9jX3pwj1Faup4UZgsPJy0ftpFFBYp75pHtyyOBZ3Zq2nmHr7eKjPmy1ZFRQPyscmmW8IWlliQjoq6ex0g
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNUT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.oZmCp9x_KfppIgWZPA4sgetezMVtAZoGoxOqwusOguZC8Ts9ku6xkHWpNGbqFI3xwfWBUojej-8Kn-JazA8zAA
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNZz09IiwiZXhwIjoxNjkyMTkwNTY2fQ.5cIIb-PmzGGrPdJDbm8Gzap1rOz9NBjOQ7uJY5AbCW0wuVh71jWV2a7WH1mauTI8zydkivLAwi9FNgQe9fhLxA
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNdz09IiwiZXhwIjoxNjkyMTkwNTY2fQ.MOhof260JUooSHc7V8bxlaqqvuExKo2Vvz8R1kP8DgLAxq7o3DOQD-TOLVL5LtmaFMdjaqLjVTYYAVtl3gCiug
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVOQT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.2ah4mS2iMOIoyfi1uyMgXbo9UQZAFADfFAPrGCgrE-5IBR3ZKXJ81nF5yLQESBV-IYdDHZ6oMxNocK3sFC5eTg
+eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVOUT09IiwiZXhwIjoxNjkyMTkwNTY2fQ.z9L7vheGt2eldAlDqWgRRl86qTXpWO6J-lxPiGaycDCHyyHXPqwoSkjnfNRZDR5P_8CtbT2N6E40dfHoSNoHhQ
+)
 
-total=${#users[*]}
+BROKER_URI=wss://mqtt-s01-webinar-foxford.dev.netology-group.services/mqtt
+CONFERENCE_API_ENDPOINT=https://dev.netology-group.services/s01/webinar-foxford/conference/api/v1
+CONFERENCE_APP_NAME=conference.svc.netology-group.services
+CONFERENCE_ROOM_ID=$room
+STUN_URL=stun:turn.staging01.svc.netology-group.services:3478
+#TELEMETRY_APP_NAME=test123
+TURN_URL=turn:turn.staging01.svc.netology-group.services:3478
+TURN_USERNAME=ntg
+TURN_PASSWORD=password
+VIDEO_CODEC=VP8
 
-BROKER_URI=
-CONFERENCE_APP_NAME=
-CONFERENCE_ROOM_ID=
-STUN_URL=
-TELEMETRY_APP_NAME=
-TURN_URL=
-TURN_USERNAME=
-TURN_PASSWORD=
-
-#
-# different labels
-#
 for (( i=0; i<$n; i++ ))
 do
   wrtc-agent \
     -c wrtc-$i.${users[index]} \
+    -e ${CONFERENCE_API_ENDPOINT} \
     -n ${CONFERENCE_APP_NAME} \
     -P ${tokens[index]} \
     -r ${CONFERENCE_ROOM_ID} \
     --stun ${STUN_URL} \
-    --telemetry ${TELEMETRY_APP_NAME} \
     --turn ${TURN_URL} \
     --turn-username ${TURN_USERNAME} \
     --turn-password ${TURN_PASSWORD} \
-    -u ${BROKER_URI} &
+    -u ${BROKER_URI} \
+    --vc ${VIDEO_CODEC} &
 
   echo $!
 
-  sleep 5
+  sleep $SLEEP_SECONDS
 done
 
 wait
-#pkill -P $$
