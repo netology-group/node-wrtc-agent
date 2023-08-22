@@ -34,6 +34,7 @@
     "sdp-transform": "~2.13.0",
     "uuid": "~7.0.3",
     "wrtc": "0.4.7",
+    "ws": "^8.13.0",
     "yargs": "~15.3.1"
   },
   "devDependencies": {
