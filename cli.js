@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 /* eslint-disable quote-props */
+require('isomorphic-fetch')
+require('regenerator-runtime/runtime')
+
+const process = require('process')
+const debounce = require('lodash/debounce')
+
 const { argv } = require('yargs')
   .scriptName('wrtc-agent')
   .options({
@@ -8,6 +14,12 @@ const { argv } = require('yargs')
       alias: 'client-id',
       demandOption: true,
       description: 'Client id for mqtt-client',
+      type: 'string'
+    },
+    'e': {
+      alias: 'endpoint',
+      demandOption: true,
+      description: 'HTTP API endpoint for Conference client',
       type: 'string'
     },
     'n': {
@@ -78,20 +90,21 @@ const { argv } = require('yargs')
   .help()
 /* eslint-enable quote-props */
 
-const { createPeerStatsMonitor, stats2metrics } = require('./lib/metrics')
-const { createClient, enterRoom, publishTelemetry } = require('./lib/mqtt')
+// const { createPeerStatsMonitor, stats2metrics } = require('./lib/metrics')
+const { createClient } = require('./lib/mqtt')
 const { Peer, transformOffer } = require('./lib/peer')
 
 // args
 const {
   clientId,
+  endpoint,
   name: appName,
   password,
   roomId,
   relayOnly,
   stun,
-  telemetry: telemetryAppName,
-  telemetryInterval,
+  // telemetry: telemetryAppName,
+  // telemetryInterval,
   turn,
   turnPassword,
   turnUsername,
@@ -99,6 +112,7 @@ const {
   videoCodec
 } = argv
 
+const agentLabel = clientId.split('.')[0]
 const iceServers = [
   { urls: stun },
   {
@@ -156,34 +170,64 @@ function listRtcStreamAll (client, roomId) {
   })
 }
 
-function startListening (client, mqttClient, activeRtcStream) {
+function startListening (client, mqttClient, activeRtcStream, agentLabel) {
   const activeRtcId = activeRtcStream.rtc_id
   const listenerOptions = { offerToReceiveVideo: true, offerToReceiveAudio: true }
 
   let handleId = null
+  let signalList = []
+
+  function sendSignals (errorCallback) {
+    if (!signalList.length) {
+      return
+    }
+
+    const signals = signalList.slice()
+
+    signalList = []
+
+    client.createRtcSignal(handleId, signals, undefined, agentLabel)
+      .catch(errorCallback)
+  }
+
+  const debouncedSendSignals = debounce(sendSignals.bind(null, (error) => {
+    console.log('[sendSignals] error', error)
+  }), 300)
 
   peer = new Peer(
     { iceServers, iceTransportPolicy },
     candidateObj => {
       const { candidate, completed, sdpMid, sdpMLineIndex } = candidateObj
 
-      client.createRtcSignal(handleId, completed ? candidateObj : { candidate, sdpMid, sdpMLineIndex })
-        .catch(error => console.debug('[startListening] error', error))
+      signalList.push(completed ? candidateObj : { candidate, sdpMid, sdpMLineIndex })
+
+      debouncedSendSignals()
     },
-    (track, streams) => {
+    (track) => {
       console.debug('[track]', track.kind)
     }
   )
 
-  if (telemetryAppName) {
-    peerStats = createPeerStatsMonitor(peer._peer, telemetryInterval, (stats) => {
-      const payload = stats2metrics(stats)
+  // if (telemetryAppName) {
+  //   peerStats = createPeerStatsMonitor(peer._peer, 1000, (stats) => {
+  //     const payload = stats2metrics(stats)
+  //     const data = {}
+  //
+  //     payload.forEach(metric => data[metric.metric] = metric.value)
+  //
+  //     process.send({ agentLabel, state: 'active', metrics: data })
+  //
+  //     // console.log(`===[${agentLabel}]===`)
+  //     // payload.forEach(metric => console.log(`${metric.metric}: \t\t\t${metric.value}`))
+  //     // console.log('[stats]', payload)
+  //
+  //     // metricsTable[agentLabel] = data
+  //
+  //     // console.table(metricsTable)
+  //   })
+  // }
 
-      publishTelemetry(mqttClient, clientId, telemetryAppName, payload)
-    })
-  }
-
-  client.connectRtc(activeRtcId)
+  client.connectRtc(activeRtcId, agentLabel)
     .then((response) => {
       handleId = response.handle_id
 
@@ -192,7 +236,7 @@ function startListening (client, mqttClient, activeRtcStream) {
     .then(offer => {
       const newOffer = transformOffer(offer, { videoCodec })
 
-      return client.createRtcSignal(handleId, newOffer)
+      return client.createRtcSignal(handleId, newOffer, undefined, agentLabel)
         .then((response) => ({ response, offer: newOffer }))
     })
     .then(({ response, offer }) => {
@@ -214,8 +258,8 @@ function stopListening () {
   }
 }
 
-createClient({ appName, clientId, password, uri })
-  .then(({ conferenceClient, mqttClient }) => {
+createClient({ agentLabel, appName, clientId, endpoint, password, uri })
+  .then(({ conferenceClient, httpConferenceClient, mqttClient }) => {
     function isStreamActive (stream) {
       const { time } = stream
 
@@ -232,7 +276,7 @@ createClient({ appName, clientId, password, uri })
       if (!activeRtcStream && isStreamActive(stream)) {
         activeRtcStream = stream
 
-        startListening(conferenceClient, mqttClient, activeRtcStream)
+        startListening(httpConferenceClient, mqttClient, activeRtcStream, agentLabel)
       } else if (activeRtcStream && stream && activeRtcStream.id === stream.id && isStreamEnded(stream)) {
         activeRtcStream = null
 
@@ -255,18 +299,17 @@ createClient({ appName, clientId, password, uri })
       handleStream(event.data)
     })
 
-    enterRoom(conferenceClient, roomId, clientId)
+    httpConferenceClient.enterRoom(roomId, agentLabel)
       .then(() => {
         console.log('[READY]')
 
-        listRtcStreamAll(conferenceClient, roomId)
+        listRtcStreamAll(httpConferenceClient, roomId)
           .then((response) => {
-            console.log('[listRtcStream] response', response)
-
             if (response.length > 0 && isStreamActive(response[0])) {
               handleStream(response[0])
             }
           })
           .catch(error => console.log('[listRtcStreamAll] error', error))
       })
+      .catch(error => console.log('[enterRoom] error', error))
   })

@@ -23,6 +23,7 @@ $ wrtc-agent --help
 Options:
   --version             Show version number                            [boolean]
   -c, --client-id       Client id for mqtt-client            [string] [required]
+  -e, --endpoint        HTTP API endpoint for Conference     [string] [required]
   -n, --name            Conference app name                  [string] [required]
   -P, --password        Password for mqtt-client             [string] [required]
   -r, --room-id         Conference room id                   [string] [required]
@@ -45,7 +46,8 @@ Options:
 #!/usr/bin/env bash
 
 ACCESS_TOKEN=foobar
-BROKER_URI=ws://example.org/
+BROKER_URI=wss://example.org/
+CONFERENCE_API_ENDPOINT=https://example.org/api
 CONFERENCE_APP_NAME=conference.example.org
 CONFERENCE_ROOM_ID=ea3f9fd1-3356-43b4-b709-b7cfc563ea59
 STUN_URL=stun:stun.example.org:3478
@@ -56,6 +58,7 @@ TURN_PASSWORD=password
 
 wrtc-agent \
   -c web.john-doe.example.org \
+  -e ${CONFERENCE_API_ENDPOINT} \
   -n ${CONFERENCE_APP_NAME} \
   -P ${ACCESS_TOKEN} \
   -r ${CONFERENCE_ROOM_ID} \
