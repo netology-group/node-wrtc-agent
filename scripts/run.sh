@@ -1,65 +1,54 @@
 #!/usr/bin/env bash
 
-index=$1
-n=$2
-room=$3
-SLEEP_SECONDS="${4:-1}"
+## Usage
+#
+# Parameters:
+# N_AGENTS            | {number}  | *required*  | Number of agents to spawn
+# CONFERENCE_ROOM_ID  | {uuid}    | *required*  | Room ID for Conference service
+# SLEEP_SECONDS       | {number}  | optional    | Agent start interval (default - 1s)
+#
+# Example:
+# bash scripts/run.sh {N_AGENTS} {CONFERENCE_ROOM_ID} [{SLEEP_SECONDS}]
+# bash scripts/run.sh 250 f17d64bc-ceaa-4563-8c2e-432de7bfe91b 0.2
 
-users=(
-Z2lkOi8vc3RvZWdlL0FkbWluLzc4Ng==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc4Nw==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc4OA==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc4OQ==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5MA==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5MQ==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5Mg==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5Mw==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5NA==.usr.foxford.ru
-Z2lkOi8vc3RvZWdlL0FkbWluLzc5NQ==.usr.foxford.ru
-)
+if [[ ! "${ACCESS_TOKEN}" ]]; then echo "ACCESS_TOKEN is required." 1>&2; exit 1; fi
+if [[ ! "${ACCOUNT_ID}" ]]; then echo "ACCOUNT_ID is required." 1>&2; exit 1; fi
+if [[ ! "${CONFERENCE_API_ENDPOINT}" ]]; then echo "CONFERENCE_API_ENDPOINT is required." 1>&2; exit 1; fi
+if [[ ! "${CONFERENCE_APP_NAME}" ]]; then echo "CONFERENCE_APP_NAME is required." 1>&2; exit 1; fi
+if [[ ! "${MQTT_BROKER_URI}" ]]; then echo "MQTT_BROKER_URI is required." 1>&2; exit 1; fi
+if [[ ! "${STUN_URL}" ]]; then echo "STUN_URL is required." 1>&2; exit 1; fi
+if [[ ! "${TURN_PASSWORD}" ]]; then echo "TURN_PASSWORD is required." 1>&2; exit 1; fi
+if [[ ! "${TURN_URL}" ]]; then echo "TURN_URL is required." 1>&2; exit 1; fi
+if [[ ! "${TURN_USERNAME}" ]]; then echo "TURN_USERNAME is required." 1>&2; exit 1; fi
 
-tokens=(
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzROZz09IiwiZXhwIjoxNjkyNzg2ODkyfQ.I_f8APPLcRm8816dDQzpW8AGRnDp41BUXJuAKmYyXuNIcI_TEVGMadOhE8iLIsUhcBSYImI_gduWMAqSNkjMrA
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzROdz09IiwiZXhwIjoxNjkyNzg2ODkyfQ.pYoVNzs9YlI990f28594lQGwQvpPfSdbsboUeutLgSZEHkYk3YOD2CFzBEzPidno4NaXUjjCgC4Kz9nCifNFEw
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzRPQT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.75nBRjKVHIsledE3mcs7o_YWn2YRORCiNtI6RyCX6G8_3-TbfSPwT1j-fVmTL9K6L8p84I4I4wcd17szzBoQXw
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzRPUT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.MNzmTASruMN7YP8avRxd6dpKiFqNTXg_u14VHIXMpNqFc4EhHq7dAKNtrlMu-va1AksVpCkL1cqKur-Ov_YZPQ
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNQT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.nDDl_zMgZnNJx63BPhSu_OCJf-AVXvIlWKoWORMxLedB2H1uZUjtYMTHUsTVZC6cWgHRNkvJa6ilhkV-nuuxsQ
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNUT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.9aR-vSu0bQ0KXWAqmshl3qtUK0KMG7kAtRyESFp8CzWjEMgj7FEPPoLswB4jF7CsHBR_dUnj_ehXftmZ6XC5BA
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNZz09IiwiZXhwIjoxNjkyNzg2ODkyfQ.e7kExQOkJAGJxqvdCJw5aP3jhNdwT2A5jSxh0FZ6tyAsWGHm5m_TIkNU3zDrGSo-r2wUAUeDVZl7AarsmIKqlg
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVNdz09IiwiZXhwIjoxNjkyNzg2ODkyfQ.JyPprGkQPnatCf-4nXYIVDMalPZvXuJpXhV0eNch1cBuyK2syeAd4b2H3_aMHIMryhfTychqMnUdXKPcc8YCNw
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVOQT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.6Rv5Nax2VZsmEAwXJTHlDhWr1iFCIyMQ5sRofaN4c11ShJXyr9JMzlehQ36Si4d8VSDC0mcs_H7nCJlOywttrg
-eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJpYW0uc3ZjLmZveGZvcmQucnUiLCJhdWQiOiJ1c3IuZm94Zm9yZC5ydSIsInN1YiI6IloybGtPaTh2YzNSdlpXZGxMMEZrYldsdUx6YzVOUT09IiwiZXhwIjoxNjkyNzg2ODkyfQ.ZDeI-XCPy34sSX40jMiEJZlaBfMqUTPLvs9RzjmgWhI-TIqrK0vposuTvG1a7Sd348Nv_BLQmGZVtT7pTG8YCw
-)
+N_AGENTS="${1}"
+CONFERENCE_ROOM_ID="${2}"
+SLEEP_SECONDS="${3:-1}"
 
-BROKER_URI=wss://mqtt-s01-webinar-foxford.dev.netology-group.services/mqtt
-CONFERENCE_API_ENDPOINT=https://dev.netology-group.services/s01/webinar-foxford/conference/api/v1
-CONFERENCE_APP_NAME=conference.svc.netology-group.services
-CONFERENCE_ROOM_ID=$room
-STUN_URL=stun:turn.staging01.svc.netology-group.services:3478
-#TELEMETRY_APP_NAME=test123
-TURN_URL=turn:turn.staging01.svc.netology-group.services:3478
-TURN_USERNAME=ntg
-TURN_PASSWORD=password
-VIDEO_CODEC=VP8
+if [[ ! "${N_AGENTS}" ]]; then echo "N_AGENTS is required." 1>&2; exit 1; fi
+if [[ ! "${CONFERENCE_ROOM_ID}" ]]; then echo "CONFERENCE_ROOM_ID is required." 1>&2; exit 1; fi
 
-for (( i=0; i<$n; i++ ))
+# Create label prefix string based on machine hostname
+HOST_ID=$(hostname | sha256sum)
+LABEL_PREFIX=${HOST_ID:0:8}
+
+for (( i=0; i<N_AGENTS; i++ ))
 do
   wrtc-agent \
-    -c wrtc-$i.${users[index]} \
-    -e ${CONFERENCE_API_ENDPOINT} \
-    -n ${CONFERENCE_APP_NAME} \
-    -P ${tokens[index]} \
-    -r ${CONFERENCE_ROOM_ID} \
-    --stun ${STUN_URL} \
-    --turn ${TURN_URL} \
-    --turn-username ${TURN_USERNAME} \
-    --turn-password ${TURN_PASSWORD} \
-    -u ${BROKER_URI} \
-    --vc ${VIDEO_CODEC} &
+    -c "${LABEL_PREFIX}-${i}.${ACCOUNT_ID}" \
+    -e "${CONFERENCE_API_ENDPOINT}" \
+    -n "${CONFERENCE_APP_NAME}" \
+    -P "${ACCESS_TOKEN}" \
+    -r "${CONFERENCE_ROOM_ID}" \
+    --stun "${STUN_URL}" \
+    --turn "${TURN_URL}" \
+    --turn-username "${TURN_USERNAME}" \
+    --turn-password "${TURN_PASSWORD}" \
+    -u "${MQTT_BROKER_URI}" &
 
   echo $!
 
-  sleep $SLEEP_SECONDS
+  sleep "$SLEEP_SECONDS"
 done
 
 wait

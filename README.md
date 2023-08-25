@@ -8,11 +8,6 @@ git clone git@github.com:netology-group/node-wrtc-agent.git
 cd node-wrtc-agent
 npm i
 
-# macOS
-npm run copy-module-darwin
-# or linux
-npm run copy-module-linux
-
 sudo npm link
 ```
 
@@ -36,7 +31,7 @@ Options:
   --turn-username       TURN username                        [string] [required]
   -u, --uri             MQTT broker URI                      [string] [required]
   --vc, --video-codec   Codec name for video (SDP)
-                      [string] [choices: "H264", "VP8", "VP9"] [default: "H264"]
+                      [string] [choices: "VP8", "VP9"] [default: "VP8"]
   --help                Show help                                      [boolean]
 ```
 
