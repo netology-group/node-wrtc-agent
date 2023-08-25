@@ -81,8 +81,8 @@ const { argv } = require('yargs')
     },
     'vc': {
       alias: 'video-codec',
-      choices: ['H264', 'VP8', 'VP9'],
-      default: 'H264',
+      choices: ['VP8', 'VP9'],
+      default: 'VP8',
       description: 'Codec name for video (SDP)',
       type: 'string'
     }
