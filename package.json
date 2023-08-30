@@ -1,6 +1,6 @@
 {
   "name": "@ulms/wrtc-agent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "WebRTC agent for load testing",
   "main": "cli.js",
   "bin": {
