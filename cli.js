@@ -186,7 +186,7 @@ function startListening (client, mqttClient, activeRtcStream, agentLabel) {
 
     signalList = []
 
-    client.createRtcSignal(handleId, signals, undefined, agentLabel)
+    client.createTrickleSignal(handleId, signals)
       .catch(errorCallback)
   }
 
@@ -227,21 +227,20 @@ function startListening (client, mqttClient, activeRtcStream, agentLabel) {
   //   })
   // }
 
-  client.connectRtc(activeRtcId, agentLabel)
-    .then((response) => {
-      handleId = response.handle_id
-
-      return peer.createOffer(listenerOptions)
-    })
+  peer.createOffer(listenerOptions)
     .then(offer => {
       const newOffer = transformOffer(offer, { videoCodec })
-
-      return client.createRtcSignal(handleId, newOffer, undefined, agentLabel)
-        .then((response) => ({ response, offer: newOffer }))
+      return client.createSignal(activeRtcId, newOffer)
+        .then((response) => {
+          handleId = response.handle_id
+          return { response, offer: newOffer }
+        })
     })
     .then(({ response, offer }) => {
       return peer.setOffer(offer)
-        .then(() => peer.setAnswer(response.jsep))
+        .then(() => {
+          peer.setAnswer(response.jsep)
+        })
     })
     .catch(error => console.debug('[startListening] error', error))
 }
