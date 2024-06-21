@@ -26,7 +26,7 @@
   "dependencies": {
     "@netology-group/mqtt-client": "0.4.2",
     "@peermetrics/webrtc-stats": "alexkonst/webrtc-stats#feature/node-webrtc-support",
-    "@ulms/api-clients": "5.24.0",
+    "@ulms/api-clients": "7.9.0",
     "change-case": "~4.1.1",
     "isomorphic-fetch": "^3.0.0",
     "lodash": "4.17.21",
