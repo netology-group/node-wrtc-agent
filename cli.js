@@ -4,7 +4,6 @@
 require('isomorphic-fetch')
 require('regenerator-runtime/runtime')
 
-const process = require('process')
 const debounce = require('lodash/debounce')
 
 const { argv } = require('yargs')
@@ -16,16 +15,15 @@ const { argv } = require('yargs')
       description: 'Client id for mqtt-client',
       type: 'string'
     },
+    'classroom-id': {
+      demandOption: true,
+      description: 'ULMS classroom id',
+      type: 'string'
+    },
     'e': {
       alias: 'endpoint',
       demandOption: true,
       description: 'HTTP API endpoint for Conference client',
-      type: 'string'
-    },
-    'n': {
-      alias: 'name',
-      demandOption: true,
-      description: 'Conference app name',
       type: 'string'
     },
     'P': {
@@ -49,15 +47,6 @@ const { argv } = require('yargs')
       description: 'STUN server URL',
       type: 'string'
     },
-    'telemetry': {
-      description: 'Telemetry app name',
-      type: 'string'
-    },
-    'telemetry-interval': {
-      default: 5000,
-      description: 'Telemetry interval (ms)',
-      type: 'number'
-    },
     'turn': {
       demandOption: true,
       description: 'TURN server URL',
@@ -79,6 +68,11 @@ const { argv } = require('yargs')
       description: 'MQTT broker URI',
       type: 'string'
     },
+    'ulms': {
+      demandOption: true,
+      description: 'HTTP API endpoint for ULMS client',
+      type: 'string'
+    },
     'vc': {
       alias: 'video-codec',
       choices: ['VP8', 'VP9'],
@@ -90,25 +84,23 @@ const { argv } = require('yargs')
   .help()
 /* eslint-enable quote-props */
 
-// const { createPeerStatsMonitor, stats2metrics } = require('./lib/metrics')
 const { createClient } = require('./lib/mqtt')
 const { Peer, transformOffer } = require('./lib/peer')
 
 // args
 const {
+  classroomId,
   clientId,
   endpoint,
-  name: appName,
   password,
   roomId,
   relayOnly,
   stun,
-  // telemetry: telemetryAppName,
-  // telemetryInterval,
   turn,
   turnPassword,
   turnUsername,
   uri,
+  ulms: ulmsEndpoint,
   videoCodec
 } = argv
 
@@ -125,7 +117,6 @@ const iceTransportPolicy = relayOnly ? 'relay' : 'all'
 
 let activeRtcStream = null
 let peer = null
-let peerStats = null
 
 function listRtcStreamAll (client, roomId) {
   const LIST_LIMIT = 25
@@ -186,7 +177,7 @@ function startListening (client, mqttClient, activeRtcStream, agentLabel) {
 
     signalList = []
 
-    client.createRtcSignal(handleId, signals, undefined, agentLabel)
+    client.createTrickleSignal(handleId, signals)
       .catch(errorCallback)
   }
 
@@ -208,41 +199,18 @@ function startListening (client, mqttClient, activeRtcStream, agentLabel) {
     }
   )
 
-  // if (telemetryAppName) {
-  //   peerStats = createPeerStatsMonitor(peer._peer, 1000, (stats) => {
-  //     const payload = stats2metrics(stats)
-  //     const data = {}
-  //
-  //     payload.forEach(metric => data[metric.metric] = metric.value)
-  //
-  //     process.send({ agentLabel, state: 'active', metrics: data })
-  //
-  //     // console.log(`===[${agentLabel}]===`)
-  //     // payload.forEach(metric => console.log(`${metric.metric}: \t\t\t${metric.value}`))
-  //     // console.log('[stats]', payload)
-  //
-  //     // metricsTable[agentLabel] = data
-  //
-  //     // console.table(metricsTable)
-  //   })
-  // }
-
-  client.connectRtc(activeRtcId, agentLabel)
-    .then((response) => {
-      handleId = response.handle_id
-
-      return peer.createOffer(listenerOptions)
-    })
+  peer.createOffer(listenerOptions)
     .then(offer => {
       const newOffer = transformOffer(offer, { videoCodec })
 
-      return client.createRtcSignal(handleId, newOffer, undefined, agentLabel)
-        .then((response) => ({ response, offer: newOffer }))
+      return client.createSignal(activeRtcId, newOffer)
+        .then((response) => {
+          handleId = response.handle_id
+
+          return { response, offer: newOffer }
+        })
     })
-    .then(({ response, offer }) => {
-      return peer.setOffer(offer)
-        .then(() => peer.setAnswer(response.jsep))
-    })
+    .then(({ response, offer }) => peer.setOffer(offer).then(() => peer.setAnswer(response.jsep)))
     .catch(error => console.debug('[startListening] error', error))
 }
 
@@ -252,14 +220,10 @@ function stopListening () {
 
     peer = null
   }
-
-  if (peerStats) {
-    peerStats = null
-  }
 }
 
-createClient({ agentLabel, appName, clientId, endpoint, password, uri })
-  .then(({ conferenceClient, httpConferenceClient, mqttClient }) => {
+createClient({ agentLabel, clientId, endpoint, password, ulmsEndpoint, uri })
+  .then(({ brokerClient, httpConferenceClient, mqttClient, ulmsClient }) => {
     function isStreamActive (stream) {
       const { time } = stream
 
@@ -286,7 +250,7 @@ createClient({ agentLabel, appName, clientId, endpoint, password, uri })
       }
     }
 
-    conferenceClient.on('rtc_stream.update', (event) => {
+    brokerClient.on('rtc_stream.update', (event) => {
       const { id, rtc_id, sent_by, time } = event.data // eslint-disable-line camelcase
 
       console.group(`[event:${event.type}]`)
@@ -299,7 +263,7 @@ createClient({ agentLabel, appName, clientId, endpoint, password, uri })
       handleStream(event.data)
     })
 
-    httpConferenceClient.enterRoom(roomId, agentLabel)
+    ulmsClient.enterClassroom(classroomId, agentLabel)
       .then(() => {
         console.log('[READY]')
 
