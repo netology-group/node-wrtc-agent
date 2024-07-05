@@ -1,6 +1,6 @@
 {
   "name": "@ulms/wrtc-agent",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "WebRTC agent for load testing",
   "main": "cli.js",
   "bin": {
@@ -24,15 +24,11 @@
   },
   "homepage": "https://github.com/foxford/node-wrtc-agent#readme",
   "dependencies": {
-    "@netology-group/mqtt-client": "0.4.2",
-    "@peermetrics/webrtc-stats": "alexkonst/webrtc-stats#feature/node-webrtc-support",
-    "@ulms/api-clients": "5.24.0",
-    "change-case": "~4.1.1",
+    "@ulms/api-clients": "7.9.3-dev.0-ULMS-3162",
     "isomorphic-fetch": "^3.0.0",
     "lodash": "4.17.21",
     "regenerator-runtime": "^0.13.9",
     "sdp-transform": "~2.13.0",
-    "uuid": "~7.0.3",
     "wrtc": "0.4.7",
     "yargs": "~15.3.1"
   },

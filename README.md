@@ -24,12 +24,11 @@ Options:
   -r, --room-id         Conference room id                   [string] [required]
   --relay-only          Use only "relay" ICE candidates                [boolean]
   --stun                STUN server URL                      [string] [required]
-  --telemetry           Telemetry app name                              [string]
-  --telemetry-interval  Telemetry interval (ms)         [number] [default: 5000]
   --turn                TURN server URL                      [string] [required]
   --turn-password       TURN password                        [string] [required]
   --turn-username       TURN username                        [string] [required]
   -u, --uri             MQTT broker URI                      [string] [required]
+  -ulms                 HTTP API endpoint for ULMS           [string] [required]
   --vc, --video-codec   Codec name for video (SDP)
                       [string] [choices: "VP8", "VP9"] [default: "VP8"]
   --help                Show help                                      [boolean]
@@ -43,26 +42,25 @@ Options:
 ACCESS_TOKEN=foobar
 BROKER_URI=wss://example.org/
 CONFERENCE_API_ENDPOINT=https://example.org/api
-CONFERENCE_APP_NAME=conference.example.org
 CONFERENCE_ROOM_ID=ea3f9fd1-3356-43b4-b709-b7cfc563ea59
 STUN_URL=stun:stun.example.org:3478
-TELEMETRY_APP_NAME=telemetry.example.org
+TURN_PASSWORD=password
 TURN_URL=turn:example.org:3478
 TURN_USERNAME=username
-TURN_PASSWORD=password
+ULMS_API_ENDPOINT=https://example.org/api
+ULMS_CLASSROOM_ID=ea3f9fd1-3356-43b4-b709-b7cfc563ea59
 
 wrtc-agent \
   -c web.john-doe.example.org \
+  --classroom-id "${ULMS_CLASSROOM_ID}" \
   -e ${CONFERENCE_API_ENDPOINT} \
-  -n ${CONFERENCE_APP_NAME} \
   -P ${ACCESS_TOKEN} \
   -r ${CONFERENCE_ROOM_ID} \
   --relay-only \
   --stun ${STUN_URL} \
-  --telemetry ${TELEMETRY_APP_NAME} \
-  --telemetry-interval 10000 \
   --turn ${TURN_URL} \
   --turn-username ${TURN_USERNAME} \
   --turn-password ${TURN_PASSWORD} \
-  -u ${BROKER_URI}
+  -u ${BROKER_URI} \
+  --ulms ${ULMS_API_ENDPOINT}
 ```
